@@ -116,9 +116,15 @@ async function logQuip(text: string, hash: string): Promise<void> {
   }
 }
 
-/** SHA256 hash → hex string. */
-function hashText(text: string): string {
-  return createHash("sha256").update(text).digest("hex");
+const VOICES = ["alloy", "echo", "fable", "onyx", "nova", "shimmer"] as const;
+
+function pickVoice(): string {
+  return VOICES[Math.floor(Math.random() * VOICES.length)];
+}
+
+/** SHA256 hash of text + voice for unique caching per voice. */
+function hashQuip(text: string, voice: string): string {
+  return createHash("sha256").update(`${voice}:${text}`).digest("hex");
 }
 
 const POOL_SIZE = 5;
@@ -182,7 +188,8 @@ async function generateOne(): Promise<string | null> {
   await loadQuips();
   log.info("Picking quip text...");
   const text = await getQuipText();
-  const hash = hashText(text);
+  const voice = pickVoice();
+  const hash = hashQuip(text, voice);
   const cachePath = join(config.cacheDir, `${hash}.mp3`);
 
   // Check cache
@@ -204,8 +211,8 @@ async function generateOne(): Promise<string | null> {
         Authorization: `Bearer ${config.openaiApiKey}`,
       },
       body: JSON.stringify({
-        model: config.ttsModel,
-        voice: config.ttsVoice,
+        model: "tts-1-hd",
+        voice,
         input: text,
       }),
     });
@@ -219,7 +226,7 @@ async function generateOne(): Promise<string | null> {
     const buffer = Buffer.from(await res.arrayBuffer());
     log.info(`TTS response: ${buffer.length} bytes`);
     await writeFile(cachePath, buffer);
-    log.info(`Cached quip: "${text.slice(0, 40)}..." → ${hash.slice(0, 12)}.mp3`);
+    log.info(`Cached quip [${voice}]: "${text.slice(0, 40)}..." → ${hash.slice(0, 12)}.mp3`);
     await logQuip(text, hash);
     return cachePath;
   } catch (err) {
