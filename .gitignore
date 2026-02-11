@@ -1,0 +1,7 @@
+music/
+
+node_modules/
+dist/
+cache/
+state.json
+quips.log

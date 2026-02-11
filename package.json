@@ -1,0 +1,13 @@
+{
+  "name": "radio-vibes",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "devDependencies": {
+    "@types/node": "^25.2.3",
+    "typescript": "^5.7.0"
+  }
+}
