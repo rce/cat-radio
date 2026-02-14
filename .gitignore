@@ -5,3 +5,5 @@ dist/
 cache/
 state.json
 quips.log
+test-results/
+playwright-report/

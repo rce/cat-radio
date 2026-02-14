@@ -3,10 +3,13 @@ import { config } from "./config.js";
 import { log } from "./log.js";
 import { loadStateFromSpaces, saveStateToSpaces } from "./spaces.js";
 
+import type { QuipEntry } from "./nowplaying.js";
+
 export interface RadioState {
   tracks: string[];
   index: number;
   quipPool: string[];
+  recentQuips: QuipEntry[];
 }
 
 export async function loadState(): Promise<RadioState | null> {
@@ -28,7 +31,12 @@ export async function loadState(): Promise<RadioState | null> {
         `Loaded state: track ${data.index}/${data.tracks.length}, ` +
           `${pool.length} cached quips`,
       );
-      return { tracks: data.tracks, index: data.index, quipPool: pool };
+      return {
+        tracks: data.tracks,
+        index: data.index,
+        quipPool: pool,
+        recentQuips: Array.isArray(data.recentQuips) ? data.recentQuips : [],
+      };
     }
   } catch {
     // No state file or invalid — start fresh

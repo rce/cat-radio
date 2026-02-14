@@ -10,7 +10,7 @@ import {
   ensureMusicFile,
   syncCacheFromSpaces,
 } from "./spaces.js";
-import { setNowPlaying, pushQuip } from "./nowplaying.js";
+import { setNowPlaying, pushQuip, restoreQuips, getRecentQuips } from "./nowplaying.js";
 import { basename } from "node:path";
 
 const PREFETCH_AHEAD = 3;
@@ -33,10 +33,11 @@ async function prefetch(): Promise<void> {
   await Promise.all(upcoming.map((p) => ensureMusicFile(p)));
 }
 if (quipsEnabled) warmQuipPool(saved?.quipPool);
+if (saved?.recentQuips?.length) restoreQuips(saved.recentQuips);
 
 async function persist(): Promise<void> {
   const { tracks, index } = playlist.getState();
-  await saveState({ tracks, index, quipPool: getQuipPool() });
+  await saveState({ tracks, index, quipPool: getQuipPool(), recentQuips: getRecentQuips() });
 }
 
 await prefetch();
@@ -65,6 +66,7 @@ while (true) {
           log.info(`Crossfade quip → ${basename(nextPath)}`);
           if (quip.text) pushQuip(quip.text);
           await decodeCrossfade(
+
             trackPath,
             nextPath,
             quip.path,
