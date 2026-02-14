@@ -31,18 +31,28 @@ export class Playlist {
   private tracks: string[] = [];
   private idx = 0;
 
-  /** Initialize — optionally resume from saved state. */
-  async init(savedTracks?: string[], savedIndex?: number): Promise<void> {
-    const allFiles = await scanMp3s(config.musicDir);
+  /**
+   * Initialize — optionally resume from saved state.
+   * If `knownTracks` is provided (e.g. from Spaces listing), use those as
+   * the full catalog instead of scanning local disk.
+   */
+  async init(
+    savedTracks?: string[],
+    savedIndex?: number,
+    knownTracks?: string[],
+  ): Promise<void> {
+    const allFiles = knownTracks?.length
+      ? knownTracks
+      : await scanMp3s(config.musicDir);
     if (allFiles.length === 0) {
       throw new Error(`No MP3 files found in ${config.musicDir}`);
     }
     log.info(`Found ${allFiles.length} tracks in ${config.musicDir}`);
 
     if (savedTracks?.length) {
-      // Keep only tracks that still exist on disk
-      const existing = new Set(allFiles);
-      this.tracks = savedTracks.filter((t) => existing.has(t));
+      // Keep only tracks that still exist in the catalog
+      const catalog = new Set(allFiles);
+      this.tracks = savedTracks.filter((t) => catalog.has(t));
       this.idx = Math.min(savedIndex ?? 0, this.tracks.length);
 
       if (this.tracks.length > 0 && this.idx < this.tracks.length) {
@@ -67,6 +77,15 @@ export class Playlist {
       log.info(`Reshuffled playlist (${this.tracks.length} tracks)`);
     }
     return this.tracks[this.idx++];
+  }
+
+  /** Peek at the next `n` tracks without advancing the index. */
+  peek(n: number): string[] {
+    const result: string[] = [];
+    for (let i = 0; i < n && i < this.tracks.length; i++) {
+      result.push(this.tracks[(this.idx + i) % this.tracks.length]);
+    }
+    return result;
   }
 
   /** Serializable snapshot for persistence. */

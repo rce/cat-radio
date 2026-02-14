@@ -4,7 +4,7 @@ import {
   GetObjectCommand,
   PutObjectCommand,
 } from "@aws-sdk/client-s3";
-import { mkdir, writeFile, readFile } from "node:fs/promises";
+import { access, mkdir, writeFile, readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { Readable } from "node:stream";
 import { config } from "./config.js";
@@ -86,8 +86,39 @@ async function syncPrefix(prefix: string, localDir: string): Promise<void> {
   }
 }
 
-export async function syncMusicFromSpaces(): Promise<void> {
-  await syncPrefix("music/", config.musicDir);
+/**
+ * List all music files available in Spaces, returned as local paths.
+ * Returns [] if Spaces is not configured.
+ */
+export async function listMusicInSpaces(): Promise<string[]> {
+  const s3 = getClient();
+  if (!s3) return [];
+  const keys = await listAllKeys("music/");
+  return keys
+    .map((k) => k.slice("music/".length))
+    .filter(Boolean)
+    .map((rel) => join(config.musicDir, rel));
+}
+
+/**
+ * Ensure a music file exists locally, downloading from Spaces if needed.
+ * No-op if Spaces is not configured or the file already exists.
+ */
+export async function ensureMusicFile(localPath: string): Promise<void> {
+  const s3 = getClient();
+  if (!s3) return;
+  try {
+    await access(localPath);
+    return; // already on disk
+  } catch {
+    // need to download
+  }
+  const relative = localPath.startsWith(config.musicDir + "/")
+    ? localPath.slice(config.musicDir.length + 1)
+    : localPath;
+  const key = "music/" + relative;
+  log.info(`Spaces: downloading ${key}...`);
+  await downloadFile(key, localPath);
 }
 
 export async function syncCacheFromSpaces(): Promise<void> {
