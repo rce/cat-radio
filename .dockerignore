@@ -1,0 +1,8 @@
+node_modules/
+dist/
+music/
+cache/
+state.json
+quips.log
+.git/
+.do/

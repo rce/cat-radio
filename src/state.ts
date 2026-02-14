@@ -1,6 +1,7 @@
 import { readFile, writeFile, access } from "node:fs/promises";
 import { config } from "./config.js";
 import { log } from "./log.js";
+import { loadStateFromSpaces, saveStateToSpaces } from "./spaces.js";
 
 export interface RadioState {
   tracks: string[];
@@ -9,6 +10,7 @@ export interface RadioState {
 }
 
 export async function loadState(): Promise<RadioState | null> {
+  await loadStateFromSpaces();
   try {
     const data = JSON.parse(await readFile(config.stateFile, "utf-8"));
     if (Array.isArray(data.tracks) && typeof data.index === "number") {
@@ -37,6 +39,7 @@ export async function loadState(): Promise<RadioState | null> {
 export async function saveState(state: RadioState): Promise<void> {
   try {
     await writeFile(config.stateFile, JSON.stringify(state));
+    await saveStateToSpaces();
   } catch (err) {
     log.warn("Failed to save state:", err);
   }

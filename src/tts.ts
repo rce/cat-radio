@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { log } from "./log.js";
 import { config } from "./config.js";
+import { uploadCacheFile } from "./spaces.js";
 
 let quipLines: string[] = [];
 
@@ -227,6 +228,7 @@ async function generateOne(): Promise<string | null> {
     log.info(`TTS response: ${buffer.length} bytes`);
     await writeFile(cachePath, buffer);
     log.info(`Cached quip [${voice}]: "${text.slice(0, 40)}..." → ${hash.slice(0, 12)}.mp3`);
+    await uploadCacheFile(cachePath);
     await logQuip(text, hash);
     return cachePath;
   } catch (err) {

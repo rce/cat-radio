@@ -5,10 +5,14 @@ import { decodeTrack, decodeCrossfade, probeDuration } from "./pipeline.js";
 import { Playlist } from "./playlist.js";
 import { generateQuip, warmQuipPool, getQuipPool } from "./tts.js";
 import { loadState, saveState } from "./state.js";
+import { syncMusicFromSpaces, syncCacheFromSpaces } from "./spaces.js";
 import { basename } from "node:path";
 
 const quipsEnabled = !!config.openaiApiKey;
 if (!quipsEnabled) log.warn("No OPENAI_API_KEY — quips disabled");
+
+await syncMusicFromSpaces();
+await syncCacheFromSpaces();
 
 startServer();
 

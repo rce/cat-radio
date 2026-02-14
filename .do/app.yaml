@@ -1,0 +1,26 @@
+name: radio-vibes
+services:
+  - name: radio-vibes
+    dockerfile_path: Dockerfile
+    github:
+      repo: rce/cat-radio
+      branch: main
+      deploy_on_push: true
+    http_port: 7777
+    instance_size_slug: basic-xs
+    instance_count: 1
+    envs:
+      - key: PORT
+        value: "7777"
+      - key: OPENAI_API_KEY
+        type: SECRET
+      - key: SPACES_BUCKET
+        value: "radio-vibes"
+      - key: SPACES_REGION
+        value: "nyc3"
+      - key: SPACES_ENDPOINT
+        value: "https://nyc3.digitaloceanspaces.com"
+      - key: SPACES_KEY
+        type: SECRET
+      - key: SPACES_SECRET
+        type: SECRET
