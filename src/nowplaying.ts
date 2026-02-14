@@ -20,7 +20,7 @@ export interface NowPlaying {
   version: string;
 }
 
-const MAX_QUIPS = 10;
+const MAX_QUIPS = 4;
 
 function loadVersion(): string {
   try {
