@@ -64,12 +64,7 @@ while (true) {
           await decodeTrack(trackPath, { duration: trackDur - quipDur });
 
           log.info(`Crossfade quip → ${basename(nextPath)}`);
-          if (quip.text) {
-            pushQuip(quip.text);
-            log.info(`Pushed quip to now-playing: "${quip.text.slice(0, 40)}..."`);
-          } else {
-            log.warn("Quip has no text, skipping display");
-          }
+          pushQuip(quip.text);
           await decodeCrossfade(
 
             trackPath,
