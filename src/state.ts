@@ -3,7 +3,7 @@ import { config } from "./config.js";
 import { log } from "./log.js";
 import { loadStateFromSpaces, saveStateToSpaces } from "./spaces.js";
 
-import type { QuipEntry } from "./nowplaying.js";
+import type { QuipEntry, TrackInfo } from "./nowplaying.js";
 import type { Quip } from "./tts.js";
 
 export interface RadioState {
@@ -11,6 +11,7 @@ export interface RadioState {
   index: number;
   quipPool: Quip[];
   recentQuips: QuipEntry[];
+  trackHistory: TrackInfo[];
 }
 
 export async function loadState(): Promise<RadioState | null> {
@@ -41,6 +42,7 @@ export async function loadState(): Promise<RadioState | null> {
         index: data.index,
         quipPool: pool,
         recentQuips: Array.isArray(data.recentQuips) ? data.recentQuips : [],
+        trackHistory: Array.isArray(data.trackHistory) ? data.trackHistory : [],
       };
     }
   } catch {

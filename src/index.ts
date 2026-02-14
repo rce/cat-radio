@@ -10,7 +10,7 @@ import {
   ensureMusicFile,
   syncCacheFromSpaces,
 } from "./spaces.js";
-import { setNowPlaying, pushQuip, restoreQuips, getRecentQuips } from "./nowplaying.js";
+import { setNowPlaying, setUpcoming, pushQuip, restoreQuips, getRecentQuips, getTrackHistory, restoreTrackHistory } from "./nowplaying.js";
 import { basename } from "node:path";
 
 const PREFETCH_AHEAD = 3;
@@ -34,10 +34,11 @@ async function prefetch(): Promise<void> {
 }
 if (quipsEnabled) warmQuipPool(saved?.quipPool);
 if (saved?.recentQuips?.length) restoreQuips(saved.recentQuips);
+if (saved?.trackHistory?.length) restoreTrackHistory(saved.trackHistory);
 
 async function persist(): Promise<void> {
   const { tracks, index } = playlist.getState();
-  await saveState({ tracks, index, quipPool: getQuipPool(), recentQuips: getRecentQuips() });
+  await saveState({ tracks, index, quipPool: getQuipPool(), recentQuips: getRecentQuips(), trackHistory: getTrackHistory() });
 }
 
 await prefetch();
@@ -61,6 +62,7 @@ while (true) {
         if (trackDur > quipDur) {
           log.info(`Playing: ${basename(trackPath)}`);
           setNowPlaying(trackPath);
+          setUpcoming(playlist.peek(2));
           await decodeTrack(trackPath, { duration: trackDur - quipDur });
 
           log.info(`Crossfade quip → ${basename(nextPath)}`);
@@ -76,10 +78,11 @@ while (true) {
 
           log.info(`Playing: ${basename(nextPath)}`);
           setNowPlaying(nextPath);
-          await decodeTrack(nextPath, { ss: quipDur });
+          setUpcoming(playlist.peek(2));
         } else {
           log.info(`Playing: ${basename(trackPath)}`);
           setNowPlaying(trackPath);
+          setUpcoming(playlist.peek(2));
           await decodeTrack(trackPath);
         }
 
@@ -91,6 +94,7 @@ while (true) {
 
     log.info(`Playing: ${basename(trackPath)}`);
     setNowPlaying(trackPath);
+    setUpcoming(playlist.peek(2));
     await decodeTrack(trackPath);
     await persist();
     prefetch().catch((err) => log.warn("Prefetch error:", err));

@@ -10,9 +10,10 @@ test.describe("WMEW Radio", () => {
     await expect(page.locator(".sub")).toHaveText("all paws, no pause");
     await expect(page.locator("audio#player")).toBeAttached();
     await expect(page.locator("#status")).toBeAttached();
-    await expect(page.locator("#track")).toBeAttached();
+    await expect(page.locator("#timeline")).toBeAttached();
     await expect(page.locator("#quips")).toBeAttached();
     await expect(page.locator("#listeners")).toBeAttached();
+    await expect(page.locator(".columns")).toBeAttached();
   });
 
   test("credits section links to Mewgenics and Ridiculon", async ({ page }) => {
@@ -47,8 +48,12 @@ test.describe("WMEW Radio", () => {
 
     const data = await res.json();
     expect(data).toHaveProperty("track");
+    expect(data).toHaveProperty("history");
+    expect(data).toHaveProperty("upcoming");
     expect(data).toHaveProperty("quips");
     expect(data).toHaveProperty("listeners");
+    expect(Array.isArray(data.history)).toBe(true);
+    expect(Array.isArray(data.upcoming)).toBe(true);
     expect(Array.isArray(data.quips)).toBe(true);
     expect(typeof data.listeners).toBe("number");
   });
@@ -105,8 +110,8 @@ test.describe("WMEW Radio", () => {
     // Wait for first poll (happens immediately on load)
     await page.waitForResponse(`${BASE}/api/now-playing`);
 
-    // The track div should exist (may be empty if nothing played yet, that's ok)
-    await expect(page.locator("#track")).toBeAttached();
+    // The timeline should exist (may be empty if nothing played yet, that's ok)
+    await expect(page.locator("#timeline")).toBeAttached();
     // The quips list should exist
     await expect(page.locator("#quips")).toBeAttached();
   });

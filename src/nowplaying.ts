@@ -6,8 +6,15 @@ export interface QuipEntry {
   at: string;
 }
 
+export interface TrackInfo {
+  artist: string;
+  title: string;
+}
+
 export interface NowPlaying {
-  track: { artist: string; title: string } | null;
+  track: TrackInfo | null;
+  history: TrackInfo[];
+  upcoming: TrackInfo[];
   quips: QuipEntry[];
   listeners: number;
   version: string;
@@ -24,7 +31,11 @@ function loadVersion(): string {
 }
 const VERSION = loadVersion();
 
-let currentTrack: NowPlaying["track"] = null;
+const MAX_HISTORY = 2;
+
+let currentTrack: TrackInfo | null = null;
+const trackHistory: TrackInfo[] = [];
+let upcomingTracks: TrackInfo[] = [];
 const recentQuips: QuipEntry[] = [];
 let listenerCount = 0;
 
@@ -39,7 +50,23 @@ function parseTrackName(filePath: string): { artist: string; title: string } {
 }
 
 export function setNowPlaying(filePath: string): void {
+  if (currentTrack) {
+    trackHistory.unshift(currentTrack);
+    if (trackHistory.length > MAX_HISTORY) trackHistory.length = MAX_HISTORY;
+  }
   currentTrack = parseTrackName(filePath);
+}
+
+export function setUpcoming(paths: string[]): void {
+  upcomingTracks = paths.map(parseTrackName);
+}
+
+export function getTrackHistory(): TrackInfo[] {
+  return [...trackHistory];
+}
+
+export function restoreTrackHistory(history: TrackInfo[]): void {
+  trackHistory.push(...history.slice(0, MAX_HISTORY));
 }
 
 /** Restore quips from persisted state on startup. */
@@ -64,6 +91,8 @@ export function setListeners(n: number): void {
 export function getNowPlaying(): NowPlaying {
   return {
     track: currentTrack,
+    history: [...trackHistory],
+    upcoming: [...upcomingTracks],
     quips: [...recentQuips],
     listeners: listenerCount,
     version: VERSION,

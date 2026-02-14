@@ -65,7 +65,7 @@ export function startServer(): void {
     background: #111; color: #eee; font-family: system-ui, sans-serif;
     padding: 2rem;
   }
-  .wrap { text-align: center; max-width: 480px; width: 100%; }
+  .wrap { text-align: center; max-width: 720px; width: 100%; }
   h1 { font-size: 2.5rem; margin-bottom: .3rem; }
   .sub { color: #888; margin-bottom: 1.5rem; font-size: .9rem; }
   audio { display: block; margin: 0 auto 1rem; }
@@ -75,14 +75,28 @@ export function startServer(): void {
   }
   .status.live { background: #1a3a1a; color: #4f4; }
   .status.off  { background: #3a1a1a; color: #f44; }
-  #track { margin-top: 1.2rem; font-size: .95rem; min-height: 2.4em; }
-  #track .title { font-weight: bold; }
-  #track .artist { color: #999; }
-  #quips { margin-top: 1.2rem; text-align: left; font-size: .85rem; color: #aaa; list-style: none; padding: 0; }
-  #quips li { padding: .3rem 0; border-top: 1px solid #222; }
+  .columns {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;
+    margin-top: 1.5rem; text-align: left;
+  }
+  @media (max-width: 600px) {
+    .columns { grid-template-columns: 1fr; }
+  }
+  .col-header { font-size: .75rem; text-transform: uppercase; letter-spacing: .1em; color: #666; margin-bottom: .6rem; }
+  #timeline { list-style: none; padding: 0; font-size: .85rem; }
+  #timeline li { padding: .4rem .6rem; border-radius: .3rem; }
+  #timeline li .track-title { display: block; }
+  #timeline li .track-artist { display: block; color: #999; font-size: .8em; }
+  #timeline li.history { opacity: 0.4; font-size: .82rem; }
+  #timeline li.current { opacity: 1; font-weight: bold; background: #1a2a1a; border-left: 3px solid #4f4; }
+  #timeline li.upcoming { opacity: 0.7; font-size: .85rem; }
+  #timeline li.current .track-artist { color: #8b8; }
+  #quips { list-style: none; padding: 0; font-size: .85rem; color: #aaa; }
+  #quips li { padding: .4rem 0; border-top: 1px solid #222; }
   #quips li:first-child { border-top: none; }
-  .meta { color: #555; font-size: .75rem; margin-top: .8rem; }
-  .credits { margin-top: 2rem; padding: 1.2rem; background: #1a1a1a; border-radius: .5rem; color: #ccc; font-size: .85rem; line-height: 1.8; }
+  #quips .quip-time { color: #666; font-size: .8em; margin-right: .4rem; font-variant-numeric: tabular-nums; }
+  .meta { color: #555; font-size: .75rem; margin-top: .8rem; text-align: center; }
+  .credits { margin-top: 2rem; padding: 1.2rem; background: #1a1a1a; border-radius: .5rem; color: #ccc; font-size: .85rem; line-height: 1.8; text-align: center; }
   .credits strong { color: #eee; }
   .credits a { color: #6cf; text-decoration: none; }
   .credits a:hover { text-decoration: underline; }
@@ -94,8 +108,16 @@ export function startServer(): void {
   <p class="sub">all paws, no pause</p>
   <audio id="player" controls></audio>
   <div id="status" class="status off">connecting...</div>
-  <div id="track"></div>
-  <ul id="quips"></ul>
+  <div class="columns">
+    <div>
+      <div class="col-header">Track timeline</div>
+      <ul id="timeline"></ul>
+    </div>
+    <div>
+      <div class="col-header">Latest news</div>
+      <ul id="quips"></ul>
+    </div>
+  </div>
   <div id="listeners" class="meta"></div>
   <div class="credits">
     All music is from <strong><a href="https://store.steampowered.com/app/686060/Mewgenics/" target="_blank">Mewgenics</a></strong>
@@ -128,7 +150,6 @@ export function startServer(): void {
 
   function connect() {
     clearTimeout(retryTimer);
-    // cache-bust so browser doesn't serve stale stream
     audio.src = "/stream?t=" + Date.now();
     audio.load();
     audio.play().catch(function() {});
@@ -154,7 +175,6 @@ export function startServer(): void {
     retryTimer = setTimeout(connect, 2000);
   });
 
-  // Watchdog: if currentTime stops advancing for 3s, reconnect
   var lastTime = 0;
   var stallCount = 0;
   setInterval(function() {
@@ -173,10 +193,21 @@ export function startServer(): void {
 
   connect();
 
-  var trackEl = document.getElementById("track");
+  var timelineEl = document.getElementById("timeline");
   var quipsEl = document.getElementById("quips");
   var listenersEl = document.getElementById("listeners");
   var knownVersion = null;
+
+  function renderTrack(t, cls, prefix) {
+    return '<li class="' + cls + '">'
+      + '<span class="track-title">' + prefix + ' ' + esc(t.title) + '</span>'
+      + (t.artist ? '<span class="track-artist">' + esc(t.artist) + '</span>' : '')
+      + '</li>';
+  }
+
+  function formatTime(iso) {
+    return new Date(iso).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+  }
 
   function poll() {
     fetch("/api/now-playing").then(function(r) { return r.json(); }).then(function(data) {
@@ -185,12 +216,24 @@ export function startServer(): void {
         return;
       }
       knownVersion = data.version || null;
-      if (data.track) {
-        trackEl.innerHTML = '<span class="title">' + esc(data.track.title) + '</span>'
-          + (data.track.artist ? ' <span class="artist">— ' + esc(data.track.artist) + '</span>' : '');
+
+      var html = '';
+      var hist = data.history || [];
+      // Show history in reverse (oldest first)
+      for (var i = hist.length - 1; i >= 0; i--) {
+        html += renderTrack(hist[i], 'history', '\\u266a');
       }
+      if (data.track) {
+        html += renderTrack(data.track, 'current', '\\u25b6');
+      }
+      var up = data.upcoming || [];
+      for (var j = 0; j < up.length; j++) {
+        html += renderTrack(up[j], 'upcoming', '\\u266a');
+      }
+      timelineEl.innerHTML = html;
+
       quipsEl.innerHTML = data.quips.map(function(q) {
-        return '<li>' + esc(q.text) + '</li>';
+        return '<li><span class="quip-time">' + esc(formatTime(q.at)) + '</span>' + esc(q.text) + '</li>';
       }).join('');
       listenersEl.textContent = data.listeners ? data.listeners + ' listening' : '';
     }).catch(function() {});
