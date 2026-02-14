@@ -61,8 +61,8 @@ while (true) {
 
         if (trackDur > quipDur) {
           log.info(`Playing: ${basename(trackPath)}`);
-          setNowPlaying(trackPath);
-          setUpcoming(playlist.peek(2));
+          await setNowPlaying(trackPath);
+          await setUpcoming(playlist.peek(2));
           await decodeTrack(trackPath, { duration: trackDur - quipDur });
 
           log.info(`Crossfade quip → ${basename(nextPath)}`);
@@ -77,12 +77,12 @@ while (true) {
           );
 
           log.info(`Playing: ${basename(nextPath)}`);
-          setNowPlaying(nextPath);
-          setUpcoming(playlist.peek(2));
+          await setNowPlaying(nextPath);
+          await setUpcoming(playlist.peek(2));
         } else {
           log.info(`Playing: ${basename(trackPath)}`);
-          setNowPlaying(trackPath);
-          setUpcoming(playlist.peek(2));
+          await setNowPlaying(trackPath);
+          await setUpcoming(playlist.peek(2));
           await decodeTrack(trackPath);
         }
 
@@ -93,8 +93,8 @@ while (true) {
     }
 
     log.info(`Playing: ${basename(trackPath)}`);
-    setNowPlaying(trackPath);
-    setUpcoming(playlist.peek(2));
+    await setNowPlaying(trackPath);
+    await setUpcoming(playlist.peek(2));
     await decodeTrack(trackPath);
     await persist();
     prefetch().catch((err) => log.warn("Prefetch error:", err));

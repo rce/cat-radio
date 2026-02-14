@@ -1,5 +1,6 @@
 import { basename } from "node:path";
 import { readFileSync } from "node:fs";
+import { spawn } from "node:child_process";
 
 export interface QuipEntry {
   text: string;
@@ -49,16 +50,43 @@ function parseTrackName(filePath: string): { artist: string; title: string } {
   return { artist: "", title: name };
 }
 
-export function setNowPlaying(filePath: string): void {
+/** Read ID3 tags via ffprobe, falling back to filename parsing. */
+function probeTrackMeta(filePath: string): Promise<TrackInfo> {
+  return new Promise((resolve) => {
+    const proc = spawn("ffprobe", [
+      "-v", "quiet",
+      "-print_format", "json",
+      "-show_format",
+      filePath,
+    ]);
+    let out = "";
+    proc.stdout.on("data", (chunk: Buffer) => { out += chunk; });
+    proc.on("close", (code) => {
+      if (code === 0) {
+        try {
+          const tags = JSON.parse(out)?.format?.tags;
+          if (tags?.artist && tags?.title) {
+            resolve({ artist: tags.artist, title: tags.title });
+            return;
+          }
+        } catch { /* fall through */ }
+      }
+      resolve(parseTrackName(filePath));
+    });
+    proc.on("error", () => resolve(parseTrackName(filePath)));
+  });
+}
+
+export async function setNowPlaying(filePath: string): Promise<void> {
   if (currentTrack) {
     trackHistory.unshift(currentTrack);
     if (trackHistory.length > MAX_HISTORY) trackHistory.length = MAX_HISTORY;
   }
-  currentTrack = parseTrackName(filePath);
+  currentTrack = await probeTrackMeta(filePath);
 }
 
-export function setUpcoming(paths: string[]): void {
-  upcomingTracks = paths.map(parseTrackName);
+export async function setUpcoming(paths: string[]): Promise<void> {
+  upcomingTracks = await Promise.all(paths.map(probeTrackMeta));
 }
 
 export function getTrackHistory(): TrackInfo[] {
