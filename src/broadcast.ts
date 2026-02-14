@@ -82,6 +82,11 @@ export function startServer(): void {
   #quips li { padding: .3rem 0; border-top: 1px solid #222; }
   #quips li:first-child { border-top: none; }
   .meta { color: #555; font-size: .75rem; margin-top: .8rem; }
+  .credits { margin-top: 2rem; padding: 1.2rem; background: #1a1a1a; border-radius: .5rem; color: #ccc; font-size: .85rem; line-height: 1.8; }
+  .credits strong { color: #eee; }
+  .credits a { color: #6cf; text-decoration: none; }
+  .credits a:hover { text-decoration: underline; }
+  .credits .disclaimer { margin-top: .6rem; color: #888; font-size: .75rem; }
 </style>
 </head><body>
 <div class="wrap">
@@ -92,6 +97,16 @@ export function startServer(): void {
   <div id="track"></div>
   <ul id="quips"></ul>
   <div id="listeners" class="meta"></div>
+  <div class="credits">
+    All music is from <strong><a href="https://store.steampowered.com/app/686060/Mewgenics/" target="_blank">Mewgenics</a></strong>
+    by Edmund McMillen.<br>
+    Soundtrack by <strong><a href="https://ridiculon.bandcamp.com/album/mewgenics-ost" target="_blank">Ridiculon</a></strong>
+    — <a href="https://ridiculon.bandcamp.com/" target="_blank">buy the OST on Bandcamp</a>
+    and <a href="https://store.steampowered.com/app/686060/Mewgenics/" target="_blank">get the game on Steam</a>!
+    <div class="disclaimer">
+      This is a non-commercial fan project. All music rights belong to their respective owners.
+    </div>
+  </div>
 </div>
 <script>
 (function() {
