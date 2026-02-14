@@ -112,6 +112,12 @@ export function startServer(): void {
 (function() {
   const audio = document.getElementById("player");
   const status = document.getElementById("status");
+  var saved = localStorage.getItem("wmew-volume");
+  if (saved !== null) audio.volume = parseFloat(saved);
+  audio.addEventListener("volumechange", function() {
+    localStorage.setItem("wmew-volume", String(audio.volume));
+  });
+
   let retryDelay = 1000;
   let retryTimer = null;
 
