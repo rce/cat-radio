@@ -10,6 +10,7 @@ import {
   ensureMusicFile,
   syncCacheFromSpaces,
 } from "./spaces.js";
+import { setNowPlaying, pushQuip } from "./nowplaying.js";
 import { basename } from "node:path";
 
 const PREFETCH_AHEAD = 3;
@@ -46,33 +47,37 @@ while (true) {
 
   try {
     if (quipsEnabled) {
-      const quipPath = await generateQuip();
-      if (quipPath) {
+      const quip = await generateQuip();
+      if (quip) {
         const nextPath = await playlist.next();
         await ensureMusicFile(nextPath);
 
         const [quipDur, trackDur] = await Promise.all([
-          probeDuration(quipPath),
+          probeDuration(quip.path),
           probeDuration(trackPath),
         ]);
 
         if (trackDur > quipDur) {
           log.info(`Playing: ${basename(trackPath)}`);
+          setNowPlaying(trackPath);
           await decodeTrack(trackPath, { duration: trackDur - quipDur });
 
           log.info(`Crossfade quip → ${basename(nextPath)}`);
+          if (quip.text) pushQuip(quip.text);
           await decodeCrossfade(
             trackPath,
             nextPath,
-            quipPath,
+            quip.path,
             quipDur,
             trackDur,
           );
 
           log.info(`Playing: ${basename(nextPath)}`);
+          setNowPlaying(nextPath);
           await decodeTrack(nextPath, { ss: quipDur });
         } else {
           log.info(`Playing: ${basename(trackPath)}`);
+          setNowPlaying(trackPath);
           await decodeTrack(trackPath);
         }
 
@@ -83,6 +88,7 @@ while (true) {
     }
 
     log.info(`Playing: ${basename(trackPath)}`);
+    setNowPlaying(trackPath);
     await decodeTrack(trackPath);
     await persist();
     prefetch().catch((err) => log.warn("Prefetch error:", err));

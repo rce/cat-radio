@@ -1,6 +1,7 @@
 import { createServer, type ServerResponse } from "node:http";
 import { log } from "./log.js";
 import { config } from "./config.js";
+import { getNowPlaying, setListeners } from "./nowplaying.js";
 
 const clients = new Set<ServerResponse>();
 
@@ -30,12 +31,24 @@ export function startServer(): void {
         "icy-name": "Radio Vibes",
       });
       clients.add(res);
+      setListeners(clients.size);
       log.info(`Listener connected (${clients.size} total)`);
 
       req.on("close", () => {
         clients.delete(res);
+        setListeners(clients.size);
         log.info(`Listener disconnected (${clients.size} remaining)`);
       });
+      return;
+    }
+
+    if (req.url?.startsWith("/api/now-playing")) {
+      res.writeHead(200, {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache",
+        "Access-Control-Allow-Origin": "*",
+      });
+      res.end(JSON.stringify(getNowPlaying()));
       return;
     }
 
@@ -48,10 +61,11 @@ export function startServer(): void {
 <style>
   * { margin: 0; box-sizing: border-box; }
   body {
-    height: 100vh; display: flex; align-items: center; justify-content: center;
+    min-height: 100vh; display: flex; align-items: center; justify-content: center;
     background: #111; color: #eee; font-family: system-ui, sans-serif;
+    padding: 2rem;
   }
-  .wrap { text-align: center; }
+  .wrap { text-align: center; max-width: 480px; width: 100%; }
   h1 { font-size: 2.5rem; margin-bottom: .3rem; }
   .sub { color: #888; margin-bottom: 1.5rem; font-size: .9rem; }
   audio { display: block; margin: 0 auto 1rem; }
@@ -61,6 +75,13 @@ export function startServer(): void {
   }
   .status.live { background: #1a3a1a; color: #4f4; }
   .status.off  { background: #3a1a1a; color: #f44; }
+  #track { margin-top: 1.2rem; font-size: .95rem; min-height: 2.4em; }
+  #track .title { font-weight: bold; }
+  #track .artist { color: #999; }
+  #quips { margin-top: 1.2rem; text-align: left; font-size: .85rem; color: #aaa; list-style: none; padding: 0; }
+  #quips li { padding: .3rem 0; border-top: 1px solid #222; }
+  #quips li:first-child { border-top: none; }
+  .meta { color: #555; font-size: .75rem; margin-top: .8rem; }
 </style>
 </head><body>
 <div class="wrap">
@@ -68,6 +89,9 @@ export function startServer(): void {
   <p class="sub">all paws, no pause</p>
   <audio id="player" controls></audio>
   <div id="status" class="status off">connecting...</div>
+  <div id="track"></div>
+  <ul id="quips"></ul>
+  <div id="listeners" class="meta"></div>
 </div>
 <script>
 (function() {
@@ -127,6 +151,32 @@ export function startServer(): void {
   }, 1000);
 
   connect();
+
+  var trackEl = document.getElementById("track");
+  var quipsEl = document.getElementById("quips");
+  var listenersEl = document.getElementById("listeners");
+
+  function poll() {
+    fetch("/api/now-playing").then(function(r) { return r.json(); }).then(function(data) {
+      if (data.track) {
+        trackEl.innerHTML = '<span class="title">' + esc(data.track.title) + '</span>'
+          + (data.track.artist ? ' <span class="artist">— ' + esc(data.track.artist) + '</span>' : '');
+      }
+      quipsEl.innerHTML = data.quips.map(function(q) {
+        return '<li>' + esc(q.text) + '</li>';
+      }).join('');
+      listenersEl.textContent = data.listeners ? data.listeners + ' listening' : '';
+    }).catch(function() {});
+  }
+
+  function esc(s) {
+    var d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+  }
+
+  poll();
+  setInterval(poll, 5000);
 })();
 </script>
 </body></html>`);

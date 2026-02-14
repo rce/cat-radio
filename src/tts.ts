@@ -128,8 +128,13 @@ function hashQuip(text: string, voice: string): string {
   return createHash("sha256").update(`${voice}:${text}`).digest("hex");
 }
 
+export interface Quip {
+  path: string;
+  text: string;
+}
+
 const POOL_SIZE = 5;
-const readyPool: string[] = [];
+const readyPool: Quip[] = [];
 let filling = false;
 
 /** Background: keep the pool topped up so a quip is always ready. */
@@ -139,8 +144,8 @@ async function fillPool(): Promise<void> {
   try {
     while (readyPool.length < POOL_SIZE) {
       log.info(`Pre-generating quip (${readyPool.length}/${POOL_SIZE} ready)...`);
-      const path = await generateOne();
-      if (path) readyPool.push(path);
+      const quip = await generateOne();
+      if (quip) readyPool.push(quip);
       else break; // API issue, stop trying
     }
     log.info(`Quip pool full (${readyPool.length}/${POOL_SIZE})`);
@@ -152,7 +157,7 @@ async function fillPool(): Promise<void> {
 /** Load saved pool paths and start filling the rest in background. */
 export function warmQuipPool(savedPool?: string[]): void {
   if (savedPool?.length) {
-    readyPool.push(...savedPool);
+    readyPool.push(...savedPool.map((p) => ({ path: p, text: "" })));
     log.info(`Restored ${savedPool.length} quips from state`);
   }
   fillPool().catch((err) => log.warn("Pool fill error:", err));
@@ -160,27 +165,27 @@ export function warmQuipPool(savedPool?: string[]): void {
 
 /** Get current pool contents for state persistence. */
 export function getQuipPool(): string[] {
-  return [...readyPool];
+  return readyPool.map((q) => q.path);
 }
 
 /** Grab a pre-generated quip (instant) or generate one on demand. */
-export async function generateQuip(): Promise<string | null> {
+export async function generateQuip(): Promise<Quip | null> {
   if (readyPool.length > 0) {
-    const path = readyPool.shift()!;
+    const quip = readyPool.shift()!;
     log.info(`Quip from pool (${readyPool.length}/${POOL_SIZE} remaining)`);
     // Refill in background
     fillPool().catch((err) => log.warn("Pool refill error:", err));
-    return path;
+    return quip;
   }
   log.info("Pool empty, generating on demand...");
-  const path = await generateOne();
+  const quip = await generateOne();
   // Start refilling
   fillPool().catch((err) => log.warn("Pool refill error:", err));
-  return path;
+  return quip;
 }
 
-/** Generate a single TTS quip, returning the cached file path. */
-async function generateOne(): Promise<string | null> {
+/** Generate a single TTS quip, returning the cached file path and text. */
+async function generateOne(): Promise<Quip | null> {
   if (!config.openaiApiKey) {
     log.warn("generateQuip called but no OPENAI_API_KEY");
     return null;
@@ -197,7 +202,7 @@ async function generateOne(): Promise<string | null> {
   try {
     await access(cachePath);
     log.info(`Quip cache hit: "${text.slice(0, 40)}..."`);
-    return cachePath;
+    return { path: cachePath, text };
   } catch {
     // Not cached, generate
   }
@@ -230,7 +235,7 @@ async function generateOne(): Promise<string | null> {
     log.info(`Cached quip [${voice}]: "${text.slice(0, 40)}..." → ${hash.slice(0, 12)}.mp3`);
     await uploadCacheFile(cachePath);
     await logQuip(text, hash);
-    return cachePath;
+    return { path: cachePath, text };
   } catch (err) {
     log.error("TTS generation failed:", err);
     return null;
