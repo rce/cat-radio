@@ -4,11 +4,12 @@ import { log } from "./log.js";
 import { loadStateFromSpaces, saveStateToSpaces } from "./spaces.js";
 
 import type { QuipEntry } from "./nowplaying.js";
+import type { Quip } from "./tts.js";
 
 export interface RadioState {
   tracks: string[];
   index: number;
-  quipPool: string[];
+  quipPool: Quip[];
   recentQuips: QuipEntry[];
 }
 
@@ -17,12 +18,16 @@ export async function loadState(): Promise<RadioState | null> {
   try {
     const data = JSON.parse(await readFile(config.stateFile, "utf-8"));
     if (Array.isArray(data.tracks) && typeof data.index === "number") {
-      // Validate quip pool — only keep paths that still exist on disk
-      const pool: string[] = [];
-      for (const p of data.quipPool ?? []) {
+      // Validate quip pool — only keep entries whose audio still exists on disk
+      // Handles both new { path, text } format and old string[] format
+      const pool: Quip[] = [];
+      for (const entry of data.quipPool ?? []) {
+        const path = typeof entry === "string" ? entry : entry?.path;
+        const text = typeof entry === "string" ? "" : (entry?.text ?? "");
+        if (!path) continue;
         try {
-          await access(p);
-          pool.push(p);
+          await access(path);
+          pool.push({ path, text });
         } catch {
           // file gone, skip
         }

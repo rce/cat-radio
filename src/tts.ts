@@ -154,18 +154,18 @@ async function fillPool(): Promise<void> {
   }
 }
 
-/** Load saved pool paths and start filling the rest in background. */
-export function warmQuipPool(savedPool?: string[]): void {
+/** Load saved pool from state and start filling the rest in background. */
+export function warmQuipPool(savedPool?: Quip[]): void {
   if (savedPool?.length) {
-    readyPool.push(...savedPool.map((p) => ({ path: p, text: "" })));
+    readyPool.push(...savedPool);
     log.info(`Restored ${savedPool.length} quips from state`);
   }
   fillPool().catch((err) => log.warn("Pool fill error:", err));
 }
 
 /** Get current pool contents for state persistence. */
-export function getQuipPool(): string[] {
-  return readyPool.map((q) => q.path);
+export function getQuipPool(): Quip[] {
+  return [...readyPool];
 }
 
 /** Grab a pre-generated quip (instant) or generate one on demand. */
