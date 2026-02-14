@@ -176,9 +176,15 @@ export function startServer(): void {
   var trackEl = document.getElementById("track");
   var quipsEl = document.getElementById("quips");
   var listenersEl = document.getElementById("listeners");
+  var knownVersion = null;
 
   function poll() {
     fetch("/api/now-playing").then(function(r) { return r.json(); }).then(function(data) {
+      if (knownVersion && data.version && data.version !== knownVersion) {
+        location.reload();
+        return;
+      }
+      knownVersion = data.version || null;
       if (data.track) {
         trackEl.innerHTML = '<span class="title">' + esc(data.track.title) + '</span>'
           + (data.track.artist ? ' <span class="artist">— ' + esc(data.track.artist) + '</span>' : '');

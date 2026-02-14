@@ -1,4 +1,5 @@
 import { basename } from "node:path";
+import { readFileSync } from "node:fs";
 
 export interface QuipEntry {
   text: string;
@@ -9,9 +10,19 @@ export interface NowPlaying {
   track: { artist: string; title: string } | null;
   quips: QuipEntry[];
   listeners: number;
+  version: string;
 }
 
 const MAX_QUIPS = 10;
+
+function loadVersion(): string {
+  try {
+    return readFileSync("COMMIT_HASH", "utf-8").trim();
+  } catch {
+    return Date.now().toString(36);
+  }
+}
+const VERSION = loadVersion();
 
 let currentTrack: NowPlaying["track"] = null;
 const recentQuips: QuipEntry[] = [];
@@ -55,5 +66,6 @@ export function getNowPlaying(): NowPlaying {
     track: currentTrack,
     quips: [...recentQuips],
     listeners: listenerCount,
+    version: VERSION,
   };
 }
