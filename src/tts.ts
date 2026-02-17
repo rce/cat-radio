@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { log } from "./log.js";
 import { config } from "./config.js";
 import { uploadCacheFile } from "./spaces.js";
+import { getListenerCount } from "./broadcast.js";
 
 let quipLines: string[] = [];
 
@@ -139,10 +140,11 @@ let filling = false;
 
 /** Background: keep the pool topped up so a quip is always ready. */
 async function fillPool(): Promise<void> {
-  if (filling || !config.openaiApiKey) return;
+  if (filling || !config.openaiApiKey || getListenerCount() === 0) return;
   filling = true;
   try {
     while (readyPool.length < POOL_SIZE) {
+      if (getListenerCount() === 0) break;
       log.info(`Pre-generating quip (${readyPool.length}/${POOL_SIZE} ready)...`);
       const quip = await generateOne();
       if (quip) readyPool.push(quip);
@@ -170,6 +172,7 @@ export function getQuipPool(): Quip[] {
 
 /** Grab a pre-generated quip (instant) or generate one on demand. */
 export async function generateQuip(): Promise<Quip | null> {
+  if (getListenerCount() === 0) return null;
   if (readyPool.length > 0) {
     const quip = readyPool.shift()!;
     log.info(`Quip from pool (${readyPool.length}/${POOL_SIZE} remaining)`);

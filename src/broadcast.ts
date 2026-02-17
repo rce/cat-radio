@@ -5,6 +5,17 @@ import { getNowPlaying, setListeners } from "./nowplaying.js";
 
 const clients = new Set<ServerResponse>();
 
+export function getListenerCount(): number {
+  return clients.size;
+}
+
+let listenerWaiter: (() => void) | null = null;
+
+export function waitForListeners(): Promise<void> {
+  if (clients.size > 0) return Promise.resolve();
+  return new Promise<void>((resolve) => { listenerWaiter = resolve; });
+}
+
 export function broadcast(chunk: Buffer): void {
   for (const res of clients) {
     if (!res.writable) {
@@ -33,6 +44,10 @@ export function startServer(): void {
       clients.add(res);
       setListeners(clients.size);
       log.info(`Listener connected (${clients.size} total)`);
+      if (listenerWaiter) {
+        listenerWaiter();
+        listenerWaiter = null;
+      }
 
       req.on("close", () => {
         clients.delete(res);

@@ -1,6 +1,6 @@
 import { log } from "./log.js";
 import { config } from "./config.js";
-import { startServer } from "./broadcast.js";
+import { startServer, waitForListeners, getListenerCount } from "./broadcast.js";
 import { decodeTrack, decodeCrossfade, probeDuration } from "./pipeline.js";
 import { Playlist } from "./playlist.js";
 import { generateQuip, warmQuipPool, getQuipPool } from "./tts.js";
@@ -44,6 +44,12 @@ async function persist(): Promise<void> {
 await prefetch();
 
 while (true) {
+  if (getListenerCount() === 0) {
+    log.info("No listeners, pausing until someone connects...");
+    await waitForListeners();
+    log.info("Listener connected, resuming playback!");
+  }
+
   const trackPath = await playlist.next();
   await ensureMusicFile(trackPath);
 
